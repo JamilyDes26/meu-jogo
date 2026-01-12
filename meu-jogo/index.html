@@ -1,251 +1,123 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
-<title>Meu primeiro jogo</title>
+<title>Meu Primeiro Jogo</title>
 
 <style>
-body {
+  body {
     margin: 0;
+    background: #222;
     overflow: hidden;
-    touch-action: none;
-    background: linear-gradient(#5ec6ff, #bdefff);
-}
+  }
 
-#chao {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    height: 120px;
-    background: #4caf50;
-}
-
-#jogador {
+  #jogador {
     width: 50px;
     height: 50px;
-    background: #2ecc71;
-    border-radius: 10px;
+    background: green;
     position: absolute;
-    left: 100px;
-    top: 250px;
-}
+    left: 50px;
+    top: 200px;
+  }
 
-#inimigo {
+  #inimigo {
     width: 50px;
     height: 50px;
-    background: #e74c3c;
-    border-radius: 50%;
+    background: red;
     position: absolute;
-    left: 400px;
-    top: 250px;
-}
+    left: 100%;
+    top: 200px;
+  }
 
-#hud {
+  #placar {
     position: fixed;
     top: 10px;
     left: 10px;
-    font-size: 20px;
+    color: white;
     font-family: Arial;
-    font-weight: bold;
-    color: #222;
-}
-
-#mensagem {
-    position: fixed;
-    top: 40%;
-    width: 100%;
-    text-align: center;
-    font-size: 36px;
-    font-family: Arial;
-    color: #222;
-    display: none;
-}
+    font-size: 18px;
+  }
 </style>
 </head>
 
 <body>
 
-<div id="hud">
-❤️❤️❤️ Pontos: <span id="pontos">0</span><br>
-🏆 Recorde: <span id="recorde">0</span>
-</div>
-
-<div id="mensagem">GAME OVER<br>Toque ou Espaço</div>
-
+<div id="placar">Pontos: 0</div>
 <div id="jogador"></div>
 <div id="inimigo"></div>
-<div id="chao"></div>
 
 <script>
-// 🔊 áudio simples
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function som(freq, dur) {
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.frequency.value = freq;
-    o.type = "square";
-    o.connect(g);
-    g.connect(audioCtx.destination);
-    o.start();
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-    o.stop(audioCtx.currentTime + dur);
-}
-
-// elementos
 let jogador = document.getElementById("jogador");
 let inimigo = document.getElementById("inimigo");
-let pontosSpan = document.getElementById("pontos");
-let recordeSpan = document.getElementById("recorde");
-let mensagem = document.getElementById("mensagem");
+let placar = document.getElementById("placar");
 
-// recorde salvo
-let recorde = localStorage.getItem("recorde") || 0;
-recordeSpan.innerText = recorde;
-
-// jogador
-let x = 100;
-let y = 250;
-let chaoY = 250;
-let velX = 0;
-let velY = 0;
+let x = 50;
+let y = 200;
+let inimigoX = window.innerWidth;
+let pontos = 0;
 let pulando = false;
 
-// inimigo
-let inimigoX = 400;
-let inimigoVel = 2;
-let inimigoVelBase = 2;
+document.addEventListener("keydown", function(e) {
+  if (e.key === "ArrowRight") x += 15;
+  if (e.key === "ArrowLeft") x -= 15;
 
-// jogo
-let pontos = 0;
-let vidas = 3;
-let gameOver = false;
-
-// teclado
-document.addEventListener("keydown", (e) => {
-    if (audioCtx.state === "suspended") audioCtx.resume();
-
-    if (gameOver && (e.code === "Space" || e.key === "Enter")) {
-        reiniciar();
-        return;
-    }
-
-    if (gameOver) return;
-
-    if (e.key === "ArrowRight") velX = 5;
-    if (e.key === "ArrowLeft") velX = -5;
-
-    if (e.code === "Space" && !pulando) {
-        velY = -18;
-        pulando = true;
-        som(700, 0.15);
-    }
+  if (e.code === "Space" && !pulando) {
+    pulando = true;
+    let altura = 0;
+    let pulo = setInterval(() => {
+      if (altura < 80) {
+        y -= 5;
+        altura += 5;
+      } else {
+        clearInterval(pulo);
+        let desce = setInterval(() => {
+          if (altura > 0) {
+            y += 5;
+            altura -= 5;
+          } else {
+            clearInterval(desce);
+            pulando = false;
+          }
+        }, 20);
+      }
+    }, 20);
+  }
 });
 
-document.addEventListener("keyup", () => velX = 0);
+function loop() {
+  inimigoX -= 5;
 
-// 📱 CONTROLE TOUCH
-document.addEventListener("touchstart", (e) => {
-    if (audioCtx.state === "suspended") audioCtx.resume();
+  if (inimigoX < -50) {
+    inimigoX = window.innerWidth;
+    pontos++;
+    placar.innerText = "Pontos: " + pontos;
+  }
 
-    let xToque = e.touches[0].clientX;
-    let largura = window.innerWidth;
+  jogador.style.left = x + "px";
+  jogador.style.top = y + "px";
+  inimigo.style.left = inimigoX + "px";
 
-    if (gameOver) {
-        reiniciar();
-        return;
-    }
+  let j = jogador.getBoundingClientRect();
+  let i = inimigo.getBoundingClientRect();
 
-    if (xToque < largura * 0.33) velX = -5;
-    else if (xToque > largura * 0.66) velX = 5;
-    else if (!pulando) {
-        velY = -18;
-        pulando = true;
-        som(700, 0.15);
-    }
-});
+  if (
+    j.right > i.left &&
+    j.left < i.right &&
+    j.bottom > i.top &&
+    j.top < i.bottom
+  ) {
+    alert("Game Over!");
+    location.reload();
+  }
 
-document.addEventListener("touchend", () => velX = 0);
-
-// LOOP PRINCIPAL
-setInterval(() => {
-    if (gameOver) return;
-
-    velY += 1;
-    x += velX;
-    y += velY;
-
-    if (y >= chaoY) {
-        y = chaoY;
-        velY = 0;
-        pulando = false;
-    }
-
-    jogador.style.left = x + "px";
-    jogador.style.top = y + "px";
-
-    inimigoX += inimigoVel;
-    if (inimigoX <= 0 || inimigoX + 50 >= window.innerWidth) {
-        inimigoVel *= -1;
-    }
-    inimigo.style.left = inimigoX + "px";
-
-    // colisão
-    let j = jogador.getBoundingClientRect();
-    let i = inimigo.getBoundingClientRect();
-
-    if (j.right > i.left && j.left < i.right &&
-        j.bottom > i.top && j.top < i.bottom) {
-
-        vidas--;
-        inimigoX = 400;
-        som(200, 0.2);
-
-        if (vidas <= 0) {
-            gameOver = true;
-            mensagem.style.display = "block";
-
-            if (pontos > recorde) {
-                recorde = pontos;
-                localStorage.setItem("recorde", recorde);
-                recordeSpan.innerText = recorde;
-            }
-            som(100, 0.5);
-        }
-    }
-
-    pontosSpan.innerText = pontos;
-    document.getElementById("hud").innerHTML =
-        "❤️".repeat(vidas) + " Pontos: " + pontos +
-        "<br>🏆 Recorde: " + recorde;
-
-}, 30);
-
-// pontos + dificuldade
-setInterval(() => {
-    if (!gameOver) {
-        pontos++;
-        if (pontos % 5 === 0) {
-            inimigoVelBase += 0.5;
-            inimigoVel = inimigoVelBase * Math.sign(inimigoVel || 1);
-        }
-    }
-}, 1000);
-
-// reiniciar
-function reiniciar() {
-    x = 100;
-    y = 250;
-    inimigoX = 400;
-    pontos = 0;
-    vidas = 3;
-    inimigoVelBase = 2;
-    inimigoVel = 2;
-    gameOver = false;
-    mensagem.style.display = "none";
+  requestAnimationFrame(loop);
 }
+
+loop();
 </script>
 
 </body>
 </html>
+
+
